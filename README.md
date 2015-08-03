@@ -2,8 +2,6 @@
 
 地理院ベクトルタイル（河川中心線）の実験
 
-## demo
-
 ## Demo
 http://frogcat.github.io/gsi-river/
 
