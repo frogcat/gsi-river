@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no" />
+<title>gsi-river</title>
+<link rel="stylesheet" href="//cdn.leafletjs.com/leaflet-1.0.0-b1/leaflet.css" />
+<script src="//cdn.leafletjs.com/leaflet-1.0.0-b1/leaflet.js"></script>
+<script src="//cdn.rawgit.com/mlevans/leaflet-hash/master/leaflet-hash.js"></script>
+<style>
+body {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+#map {
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	margin: 0;
+	padding: 0;
+}
+
+.river {
+	fill: none;
+	stroke-dasharray: 0.1, 9.9;
+	stroke-linejoin: round;
+	stroke-linecap: round;
+	animation: anime1 3s linear 0s infinite normal;
+}
+</style>
+</head>
+<body>
+	<div id="map"></div>
+	<script>
+		var styles = {
+			'細河川（通常部）' : {
+				color : "#fff",
+				weight : 3
+			},
+			'細河川（枯れ川部）' : {
+				color : "#777",
+				weight : 3
+			},
+			'河川中心線（通常部）' : {
+				color : "#fff",
+				weight : 6
+			},
+			'河川中心線（枯れ川部）' : {
+				color : "#777",
+				weight : 6
+			},
+			'人工水路（空間）' : {
+				color : "#ccf",
+				weight : 6
+			},
+			'人工水路（地下）' : {
+				color : "#000",
+				weight : 4
+			},
+			'用水路' : {
+				color : "#0f0",
+				weight : 6
+			},
+			'その他' : {
+				color : "#f00",
+				weight : 6
+			},
+			'不明' : {
+				color : "#f00",
+				weight : 6
+			}
+		};
+		var loader = {
+			tmpl : "http://cyberjapandata.gsi.go.jp/xyz/experimental_rvrcl/{z}/{x}/{y}.geojson",
+			done : [],
+			load : function(coords) {
+				if (coords.z < 14) {
+					return;
+				} else if (coords.z < 16) {
+					this.load({
+						x : coords.x * 2,
+						y : coords.y * 2,
+						z : coords.z + 1
+					});
+					this.load({
+						x : coords.x * 2 + 1,
+						y : coords.y * 2,
+						z : coords.z + 1
+					});
+					this.load({
+						x : coords.x * 2,
+						y : coords.y * 2 + 1,
+						z : coords.z + 1
+					});
+					this.load({
+						x : coords.x * 2 + 1,
+						y : coords.y * 2 + 1,
+						z : coords.z + 1
+					});
+					return;
+				} else if (coords.z > 16) {
+					this.load({
+						x : Math.floor(coords.x / 2),
+						y : Math.floor(coords.y / 2),
+						z : coords.z - 1
+					});
+					return;
+				}
+
+				var url = L.Util.template(this.tmpl, coords);
+				if (this.done.indexOf(url) > 0)
+					return;
+				this.done.push(url);
+				var x = new XMLHttpRequest();
+				x.open("GET", url, true);
+				x.onreadystatechange = function() {
+					if (x.readyState != 4 || x.status != 200)
+						return;
+					group.addLayer(L.geoJson(JSON.parse(x.responseText), {
+						className : "river",
+						style : function(a) {
+							return styles[a.properties.type];
+						}
+					}));
+				};
+				x.send();
+			}
+		};
+
+		var group = L.layerGroup();
+
+		var map = L.map("map", {
+			zoom : 16,
+			center : [ 35.569639139, 139.674843917 ]
+		}).on("zoomstart zoomlevelschange zoomend", function() {
+			if (map.getZoom() < 14 && map.hasLayer(group)) {
+				map.removeLayer(group);
+			} else if (map.getZoom() > 13 && !map.hasLayer(group)) {
+				map.addLayer(group);
+			}
+		});
+
+		map.attributionControl.addAttribution("<a href='https://github.com/gsi-cyberjapan/vector-tile-experiment'>"
+				+ "ベクトルタイル提供実験・河川中心線(国土地理院)</a>");
+
+		L.tileLayer("http://cyberjapandata.gsi.go.jp/xyz/ort/{z}/{x}/{y}.jpg", {
+			attribution : "<a href='http://maps.gsi.go.jp/development/'>地理院タイル・オルソ(国土地理院)</a>",
+			minZoom : 8,
+			maxZoom : 18
+		}).on("tileload", function(event) {
+			loader.load(event.coords);
+		}, this).addTo(map);
+
+		new L.Hash(map);
+
+		document.write("<style>@keyframes anime1{0%{stroke-dashoffset:20;}100%{stroke-dashoffset:0;}}</style>");
+	</script>
+</body>
+</html>
