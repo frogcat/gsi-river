@@ -9,5 +9,6 @@ http://frogcat.github.io/gsi-river/
 
 https://github.com/gsi-cyberjapan/vector-tile-experiment
 
-https://github.com/gsi-cyberjapan/experimental_anno
+
+
 
